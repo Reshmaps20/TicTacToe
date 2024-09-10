@@ -1,7 +1,9 @@
 package com.katalearn.tictactoegame.service;
 
+import java.util.Arrays;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.springframework.stereotype.Service;
-
 import com.katalearn.tictactoegame.constants.GameConstants;
 
 @Service
@@ -16,11 +18,7 @@ public class TicTacToeService {
 	}
 
 	private void initializeBoard() {
-		for (int i = 0; i < 3; i++) {
-			for (int j = 0; j < 3; j++) {
-				board[i][j] = ' ';
-			}
-		}
+		Arrays.stream(board).forEach(row -> Arrays.fill(row, ' '));
 	}
 
 	public String makeMove(PlayerMove playerMove) {
@@ -39,11 +37,15 @@ public class TicTacToeService {
 
 		board[row][col] = currentPlayer;
 
-		if (checkWin(currentPlayer)) {
-			gameWon = true;
-			return String.format(GameConstants.WINNER, currentPlayer, boardToString());
-		}
+		return checkWin(currentPlayer) ? handleWin(currentPlayer) : handleDrawOrContinue();
+	}
 
+	private String handleWin(char currentPlayer) {
+		gameWon = true;
+		return String.format(GameConstants.WINNER, currentPlayer, boardToString());
+	}
+
+	private String handleDrawOrContinue() {
 		if (isBoardFull()) {
 			gameDraw = true;
 			return GameConstants.DRAW;
@@ -52,7 +54,7 @@ public class TicTacToeService {
 	}
 
 	private boolean isValidMove(int row, int col) {
-		return row >= 0 && row < 3 && col >= 0 && col < 3 && board[row][col] == ' ';
+		return IntStream.of(row, col).allMatch(i -> i >= 0 && i < 3) && board[row][col] == ' ';
 	}
 
 	private boolean checkWin(char currentPlayer) {
@@ -60,37 +62,23 @@ public class TicTacToeService {
 	}
 
 	private boolean checkRowsColumns(char currentPlayer) {
-		for (int i = 0; i < 3; i++) {
-			if ((board[i][0] == currentPlayer && board[i][1] == currentPlayer && board[i][2] == currentPlayer)
-					|| (board[0][i] == currentPlayer && board[1][i] == currentPlayer && board[2][i] == currentPlayer)) {
-				return true;
-			}
-		}
-		return false;
+		return IntStream.range(0, 3).anyMatch(i -> (IntStream.range(0, 3).allMatch(j -> board[i][j] == currentPlayer))
+				|| (IntStream.range(0, 3).allMatch(j -> board[j][i] == currentPlayer)));
 	}
 
 	private boolean checkDiagonals(char currentPlayer) {
-		return (board[0][0] == currentPlayer && board[1][1] == currentPlayer && board[2][2] == currentPlayer)
-				|| (board[0][2] == currentPlayer && board[1][1] == currentPlayer && board[2][0] == currentPlayer);
+		return IntStream.range(0, 3).allMatch(i -> board[i][i] == currentPlayer)
+				|| IntStream.range(0, 3).allMatch(i -> board[i][2 - i] == currentPlayer);
 	}
 
 	private boolean isBoardFull() {
-		for (int i = 0; i < 3; i++) {
-			for (int j = 0; j < 3; j++) {
-				if (board[i][j] == ' ') {
-					return false;
-				}
-			}
-		}
-		return true;
+		return Arrays.stream(board).flatMapToInt(row -> IntStream.range(0, row.length).map(i -> row[i]))
+				.noneMatch(cell -> cell == ' ');
 	}
 
 	private String boardToString() {
-		StringBuilder sb = new StringBuilder();
-		for (int i = 0; i < 3; i++) {
-			sb.append(board[i][0]).append(" ").append(board[i][1]).append(" ").append(board[i][2]).append("\n");
-		}
-		return sb.toString();
+		return Arrays.stream(board).map(row -> new String(row).replace("", " ").trim())
+				.collect(Collectors.joining("\n"));
 	}
 
 	public String resetGame() {
